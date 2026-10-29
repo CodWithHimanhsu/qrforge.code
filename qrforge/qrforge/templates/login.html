@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in: QRForge</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <script src="{{ url_for('static', filename='js/login.js') }}" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      {% include "_brand.html" %}
+    </div>
+  </header>
+
+  <main class="container login-wrap">
+    <section class="panel" aria-labelledby="login-heading">
+      <h2 id="login-heading">Enter the password</h2>
+      <p class="hint login-intro">This QRForge is private. Ask the owner for the password.</p>
+
+      <form id="login-form" autocomplete="on" novalidate>
+        <!-- Hidden username so browsers' own password managers can offer to save the login -->
+        <input type="text" name="username" value="qrforge" autocomplete="username" class="visually-hidden" tabindex="-1" aria-hidden="true">
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" spellcheck="false" maxlength="256" required>
+          <label class="check"><input type="checkbox" id="show-password"> Show password</label>
+        </div>
+        <label class="check"><input type="checkbox" id="remember" checked> Remember on this device</label>
+        <p class="hint">If ticked, the password is saved in this browser and filled in automatically next time. Untick it on a shared computer.</p>
+
+        <p class="form-error" id="login-error" role="alert" hidden></p>
+        <p class="status login-status" id="login-status" role="status" aria-live="polite"></p>
+
+        <div class="actions">
+          <button type="submit" class="btn btn-primary" id="login-btn">Unlock</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <footer class="container site-footer">
+    <p>QRForge: Local QR Studio</p>
+  </footer>
+</body>
+</html>

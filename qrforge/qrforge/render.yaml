@@ -1,0 +1,21 @@
+# Render Blueprint: deploys QRForge as a free web service.
+# QRFORGE_PASSWORD is intentionally NOT written here. Render asks you for it
+# when you create the service, so the password never enters your Git repository.
+services:
+  - type: web
+    name: qrforge
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    # One worker (the login-attempt limiter lives in memory); threads handle concurrency.
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: QRFORGE_PUBLIC
+        value: "1"
+      - key: QRFORGE_PASSWORD
+        sync: false
+      - key: QRFORGE_SECRET_KEY
+        generateValue: true

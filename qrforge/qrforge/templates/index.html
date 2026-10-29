@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QRForge: Local QR Studio</title>
+  <meta name="description" content="Generate static QR codes locally. No subscription, no registration, no limits on how many you make.">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#config-heading">Skip to the generator</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      {% include "_brand.html" %}
+      <div class="header-actions">
+        {% if public_mode %}
+        <p class="privacy-note">Password protected. Your content is sent to this server only to build the code, and QRForge does not store it.</p>
+        {% else %}
+        <p class="privacy-note">Runs on your computer. Your content is not sent to any outside service.</p>
+        {% endif %}
+        {% if auth_enabled %}<button type="button" class="btn btn-secondary btn-small" id="logout-btn">Sign out</button>{% endif %}
+      </div>
+    </div>
+  </header>
+
+  <main class="container layout">
+    <!-- ================= CONFIGURATION ================= -->
+    <section class="panel" aria-labelledby="config-heading">
+      <h2 id="config-heading">Create a QR code</h2>
+
+      <form id="qr-form" novalidate autocomplete="off">
+        <fieldset class="group">
+          <legend>What do you want to encode?</legend>
+          <div class="type-picker" id="type-picker">
+            <label><input type="radio" name="content-type" value="url" checked><span>Website</span></label>
+            <label><input type="radio" name="content-type" value="text"><span>Text</span></label>
+            <label><input type="radio" name="content-type" value="wifi"><span>Wi-Fi</span></label>
+            <label><input type="radio" name="content-type" value="contact"><span>Contact</span></label>
+            <label><input type="radio" name="content-type" value="email"><span>Email</span></label>
+            <label><input type="radio" name="content-type" value="phone"><span>Phone / SMS</span></label>
+          </div>
+        </fieldset>
+
+        <!-- Website -->
+        <div class="type-fields" data-type="url">
+          <div class="field">
+            <label for="url-url">Website address</label>
+            <input id="url-url" type="text" inputmode="url" spellcheck="false" placeholder="https://example.com/page" aria-describedby="url-hint url-final">
+            <p class="hint" id="url-hint">Include <code>https://</code>. If you type only a domain such as <code>example.com</code>, https:// is added and shown below.</p>
+            <p class="encode-preview" id="url-final" aria-live="polite"></p>
+          </div>
+        </div>
+
+        <!-- Text -->
+        <div class="type-fields" data-type="text" hidden>
+          <div class="field">
+            <label for="text-text">Text</label>
+            <textarea id="text-text" rows="6" aria-describedby="text-count"></textarea>
+            <p class="hint" id="text-count" aria-live="polite"></p>
+          </div>
+        </div>
+
+        <!-- Wi-Fi -->
+        <div class="type-fields" data-type="wifi" hidden>
+          <div class="field">
+            <label for="wifi-ssid">Network name (SSID)</label>
+            <input id="wifi-ssid" type="text" spellcheck="false" maxlength="64">
+          </div>
+          <div class="field">
+            <label for="wifi-security">Security</label>
+            <select id="wifi-security">
+              <option value="WPA" selected>WPA / WPA2 / WPA3</option>
+              <option value="WEP">WEP (older routers)</option>
+              <option value="nopass">No password (open network)</option>
+            </select>
+          </div>
+          <div class="field" id="wifi-password-field">
+            <label for="wifi-password">Password</label>
+            <input id="wifi-password" type="password" spellcheck="false" autocomplete="off" maxlength="64">
+            <label class="check"><input type="checkbox" id="wifi-show-password"> Show password</label>
+          </div>
+          <label class="check"><input type="checkbox" id="wifi-hidden"> This is a hidden network</label>
+        </div>
+
+        <!-- Contact -->
+        <div class="type-fields" data-type="contact" hidden>
+          <div class="field">
+            <label for="contact-full_name">Full name <span class="req">(required)</span></label>
+            <input id="contact-full_name" type="text" maxlength="200">
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="contact-phone">Phone</label>
+              <input id="contact-phone" type="tel" maxlength="40" placeholder="+91 98765 43210">
+            </div>
+            <div class="field">
+              <label for="contact-email">Email</label>
+              <input id="contact-email" type="email" maxlength="254" spellcheck="false">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="contact-organization">Organization</label>
+              <input id="contact-organization" type="text" maxlength="200">
+            </div>
+            <div class="field">
+              <label for="contact-website">Website</label>
+              <input id="contact-website" type="text" inputmode="url" spellcheck="false" placeholder="https://example.com">
+            </div>
+          </div>
+          <p class="hint">Saved as a vCard 3.0 contact, which phones can add to their address book.</p>
+        </div>
+
+        <!-- Email -->
+        <div class="type-fields" data-type="email" hidden>
+          <div class="field">
+            <label for="email-to">Recipient email</label>
+            <input id="email-to" type="email" maxlength="254" spellcheck="false">
+          </div>
+          <div class="field">
+            <label for="email-subject">Subject <span class="opt">(optional)</span></label>
+            <input id="email-subject" type="text" maxlength="500">
+          </div>
+          <div class="field">
+            <label for="email-body">Message <span class="opt">(optional)</span></label>
+            <textarea id="email-body" rows="4" maxlength="5000"></textarea>
+          </div>
+        </div>
+
+        <!-- Phone / SMS -->
+        <div class="type-fields" data-type="phone" hidden>
+          <fieldset class="group inline-group">
+            <legend>Action</legend>
+            <label class="check"><input type="radio" name="phone-mode" value="phone" checked> Call this number</label>
+            <label class="check"><input type="radio" name="phone-mode" value="sms"> Start a text message</label>
+          </fieldset>
+          <div class="field">
+            <label for="phone-number">Phone number</label>
+            <input id="phone-number" type="tel" maxlength="40" placeholder="+91 98765 43210">
+          </div>
+          <div class="field" id="phone-message-field" hidden>
+            <label for="phone-message">Message <span class="opt">(optional)</span></label>
+            <textarea id="phone-message" rows="3" maxlength="1000"></textarea>
+          </div>
+          <p class="hint">What happens after scanning depends on the scanner and the phone. SMS codes normally open a draft that the person must send themselves.</p>
+        </div>
+
+        <!-- Presets and settings -->
+        <fieldset class="group">
+          <legend>Reliability preset</legend>
+          <div class="preset-picker" id="preset-picker">
+            <label><input type="radio" name="preset" value="balanced" checked><span>Balanced</span></label>
+            <label><input type="radio" name="preset" value="print"><span>Print</span></label>
+            <label><input type="radio" name="preset" value="robust"><span>Extra robust</span></label>
+          </div>
+          <p class="hint" id="preset-hint"></p>
+        </fieldset>
+
+        <details class="settings" open>
+          <summary>Settings</summary>
+
+          <fieldset class="group inline-group">
+            <legend>File format</legend>
+            <label class="check"><input type="radio" name="format" value="png" checked> PNG (image)</label>
+            <label class="check"><input type="radio" name="format" value="svg"> SVG (vector, best for print)</label>
+          </fieldset>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="size">PNG size</label>
+              <select id="size">
+                <option value="512">512 px</option>
+                <option value="1024" selected>1024 px</option>
+                <option value="2048">2048 px</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="error-correction">Error correction</label>
+              <select id="error-correction">
+                <option value="L">L: Low (about 7%)</option>
+                <option value="M" selected>M: Medium (about 15%)</option>
+                <option value="Q">Q: Quartile (about 25%)</option>
+                <option value="H">H: High (about 30%)</option>
+              </select>
+            </div>
+          </div>
+          <p class="hint" id="size-hint">A larger PNG is not automatically easier to scan. Printed size, contrast and how dense the code is matter more. SVG can be scaled to any size.</p>
+          <p class="hint">Higher error correction helps a code survive smudges or damage, but makes the same content denser. It does not guarantee scanning.</p>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="foreground">Code color</label>
+              <div class="color-input"><input id="foreground" type="color" value="#000000"><span id="foreground-value" class="mono">#000000</span></div>
+            </div>
+            <div class="field">
+              <label for="background">Background color</label>
+              <div class="color-input"><input id="background" type="color" value="#ffffff"><span id="background-value" class="mono">#FFFFFF</span></div>
+            </div>
+          </div>
+          <p class="hint" id="contrast-hint" aria-live="polite"></p>
+
+          <div class="field">
+            <label for="border">Quiet zone (blank margin)</label>
+            <select id="border">
+              <option value="4" selected>4 modules (required minimum)</option>
+              <option value="6">6 modules</option>
+              <option value="8">8 modules</option>
+            </select>
+          </div>
+        </details>
+
+        <p class="form-error" id="form-error" role="alert" hidden></p>
+
+        <div class="actions">
+          <button type="submit" class="btn btn-primary" id="generate-btn">Generate QR code</button>
+          <button type="button" class="btn btn-secondary" id="clear-btn">Clear</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ================= PREVIEW ================= -->
+    <section class="panel preview-panel" aria-labelledby="preview-heading">
+      <h2 id="preview-heading">Your QR code</h2>
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+
+      <div class="preview-stage" id="preview-stage" data-state="empty">
+        <p class="empty-note" id="empty-state">Your code will appear here. Fill in the form and choose Generate.</p>
+        <div class="spinner-wrap" id="loading" hidden><span class="spinner" aria-hidden="true"></span> Generating</div>
+        <img id="qr-img" alt="Generated QR code preview" hidden>
+      </div>
+
+      <div id="result" hidden>
+        <p class="stale-note" id="stale-note" hidden>You changed something after generating. Generate again to update this code.</p>
+
+        <dl class="meta">
+          <div><dt>Format</dt><dd id="meta-format"></dd></div>
+          <div><dt>Size</dt><dd id="meta-size"></dd></div>
+          <div><dt>QR version</dt><dd id="meta-version"></dd></div>
+          <div><dt>Error correction</dt><dd id="meta-ec"></dd></div>
+          <div><dt>Quiet zone</dt><dd id="meta-border"></dd></div>
+        </dl>
+
+        <ul class="warnings" id="warnings" hidden></ul>
+
+        <div class="actions">
+          <a class="btn btn-primary" id="download-btn" href="#" download>Download</a>
+          <button type="button" class="btn btn-secondary" id="copy-btn">Copy encoded data</button>
+        </div>
+
+        <details class="payload-details">
+          <summary>Show encoded data</summary>
+          <pre id="payload-text"></pre>
+          <p class="hint">This is the exact text stored in the code. It may include a Wi-Fi password or contact details.</p>
+        </details>
+      </div>
+
+      <div class="tips">
+        <h3>Before you print or share</h3>
+        <ul>
+          <li>Scan the code with at least one phone before distributing it.</li>
+          <li>Keep dark modules on a light background and leave the blank margin untouched.</li>
+          <li>Small prints need simpler content. A short URL makes a less dense code.</li>
+        </ul>
+        <p class="hint">Settings improve the odds, but no setting guarantees every scanner will read every code.</p>
+      </div>
+    </section>
+  </main>
+
+  <section class="container faq" aria-labelledby="faq-heading">
+    <h2 id="faq-heading">Help and questions</h2>
+
+    <details><summary>Is this a static or a dynamic QR code?</summary>
+      <p>Static. The code contains your actual content (a URL, text, Wi-Fi details and so on). It works without QRForge, never expires, and has no scan limit. The trade-off is that it cannot be edited: <strong>you cannot change the destination after printing.</strong> Services that offer editable or trackable codes use a dynamic code, which points to a redirect address on their server. That needs a server that stays online, which is why those services charge subscriptions. QRForge does not offer dynamic codes.</p>
+    </details>
+    <details><summary>Does QRForge need an internet connection?</summary>
+      {% if public_mode %}
+      <p>This hosted version does. To work offline, download the project and run it on your own computer: once Python and the dependencies are installed, it needs no connection at all. Opening a link inside a scanned code may still need internet access.</p>
+      {% else %}
+      <p>After Python and the dependencies are installed, generating and downloading codes works offline. Opening a link inside a scanned code may still need internet access.</p>
+      {% endif %}
+    </details>
+    {% if public_mode %}
+    <details><summary>Is my content stored?</summary>
+      <p>QRForge does not save or log what you enter. The server receives it only to build your image and send it back. As with any website, the hosting provider's infrastructure may keep ordinary connection records. For Wi-Fi passwords or other sensitive data, the local version (which never leaves your computer) is the more private choice.</p>
+    </details>
+    {% endif %}
+    <details><summary>Can a QR code expire?</summary>
+      <p>A static code has no expiry date from QRForge. It stops being useful only if the encoded destination stops working or the information inside becomes out of date.</p>
+    </details>
+    <details><summary>Why does a code scan but the page does not load?</summary>
+      <p>The code may contain the right address while the website is down, blocked, misspelled, or unreachable without internet.</p>
+    </details>
+    <details><summary>Why does my QR code look dense?</summary>
+      <p>More content needs more modules. A shorter URL usually produces a simpler code that is easier to scan at small sizes.</p>
+    </details>
+    <details><summary>Why does my QR code fail to scan?</summary>
+      <p>Common causes: too small, low contrast, a missing blank margin, blurry or glossy printing, glare, damage, inverted colors, or a destination that is not available. Test the actual printed or on-screen result.</p>
+    </details>
+    <details><summary>Is there a limit on how many codes I can make?</summary>
+      <p>No. There are no quotas, watermarks or accounts. Each individual code has a size limit set by the QR standard (about 2,900 bytes at the lowest error-correction level).</p>
+    </details>
+  </section>
+
+  <footer class="container site-footer">
+    {% if public_mode %}
+    <p>QRForge builds codes on this server and does not store them. No analytics, no third-party QR services.</p>
+    {% else %}
+    <p>QRForge generates codes on this computer. No analytics, no accounts, no third-party services.</p>
+    {% endif %}
+  </footer>
+</body>
+</html>
